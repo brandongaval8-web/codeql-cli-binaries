@@ -17,6 +17,2076 @@
      you know what to do).
 -->
 
+## Release 2.27.4 (2026-11-02)
+
+### Security Fixes
+
+- `codeql pack bundle` and `codeql pack publish` now check that each file added to the pack archive
+  is still inside the pack root after symbolic links are resolved. Files that resolve to a location
+  outside the pack root are omitted from the archive with a warning.
+
+### Bug Fixes
+
+- The CodeQL CLI now writes messages from the Java virtual machine, such as warnings and initialization errors, to standard error instead of standard output. Previously, these messages could corrupt the output of commands that print JSON or other machine-readable output.
+
+## Release 2.27.3 (2026-10-20)
+
+### Breaking Changes
+
+- With the release of macOS 27 and Xcode 27, Apple stopped shipping multi-architecture x86-64/arm64 binaries. These binaries are required by CodeQL to perform traced analysis. For this reason, CodeQL's `autobuild` and `manual` build modes will not be supported for compiled languages on macOS 27 with any Xcode version, and on macOS 26 when Xcode 27 is selected.
+
+### Improvements
+
+- Data extension files now support JSON syntax, with the same structure as
+  existing YAML data extensions. Java-style comments (`// ...` and `/* ... */`)
+  are also supported. Files using the `.json` extension will be parsed as JSON,
+  while all other files will continue to be parsed as YAML.
+- The `codeql test run` feature to load a data extension named `<test>.ext.yml`
+  when running `<test>.ql` or `<test>.qlref` has been updated to support JSON
+  data extensions, and files named `<test>.ext.json` will now also be loaded
+  automatically.
+
+### Bug Fixes
+
+- Fixed a bug that caused database downgrades to fail for GitHub Actions databases.
+
+## Release 2.27.2 (2026-10-07)
+
+### Improvements
+
+- Error and warning messages printed to standard error are now labelled with an
+  `ERROR: ` or `WARNING: ` prefix. Previously only diagnostics carried such a
+  label, so the severity of other messages was not apparent in plain-text
+  output. Structured output is unaffected: log files, SARIF, and stored
+  diagnostics continue to record severity without the prefix.
+- The `codeql query compile` command now accepts the `--dil-constants`
+  flag. When specified along with `--dump-dil`, the emitted DIL
+  will include the values of predicates that have been optimized into
+  constant tuple sets. Otherwise, these constants are omitted. This flag
+  also enables pretty-printing of constant tuple sets for higher-level
+  commands that involve query compilation.
+
+### Bug Fixes
+
+- Fixed a crash in `codeql resolve queries` (and other commands that
+  resolve query suites) that reported a fatal internal error when a suite
+  entry's `qlpack:` or `from:` value was not a valid QL pack name. Such
+  input now produces a clear, user-facing error instead.
+- Fixed a bug in the handling of YAML data extensions that would quietly accept integers outside of
+  the signed 64-bit range, truncating them to smaller values. (Values outside of the signed 32-bit
+  range, but inside the signed 64-bit range, were correctly rejected.) Now, all integers outside of
+  the signed 32-bit range are rejected and will cause evaluation to fail.
+
+### Miscellaneous
+
+- CLI commands that load data extensions, such as `codeql database run-queries`,
+  previously emitted a warning for each file-pattern from the `dataExtensions`
+  list of a `qlpack.yml` manifest that failed to match any extension files.
+  This check has been relaxed, and will now only emit a warning if none of the
+  patterns match any files (i.e. when there is at least one pattern but no
+  extensions are found).
+
+## Release 2.27.1 (2026-09-22)
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 25.0.4.1.
+
+  New Java releases may not be completely backwards compatible. For example,
+  Java 25 has a known issue that affects symlink resolution on mapped drives
+  on Windows (JDK-8355342). Users impacted by such regressions can run CodeQL
+  with an alternative JDK using the CODEQL_JAVA_HOME environment variable.
+
+## Release 2.27.0 (2026-09-09)
+
+### New Features
+
+- CodeQL now supports native Linux arm64 (`linux-arm64`) as a first-class
+  platform. The per-platform CLI (`codeql-linux-arm64.zip`) and CodeQL bundle
+  (`codeql-bundle-linux-arm64.tar.gz` and `codeql-bundle-linux-arm64.tar.zst`)
+  are available as release assets. Arm64 binaries are provided as a per-platform
+  download only, and are not included in the combined `codeql.zip`,
+  `codeql-bundle.tar.gz`, or `codeql-bundle.tar.zst`.
+- CodeQL can now take advantage of an organization's private registry
+  configurations in Code Scanning Default Setup to authenticate to container
+  registries or the GitHub API when trying to fetch custom queries or packs.
+  This allows custom queries or packs to be accessed from private locations in
+  Code Scanning Default Setup as long as suitable "Git Source" or "Docker
+  Registry" private registry configurations are set up for the organization.
+
+### Deprecations
+
+- Language support for Java 9 and 10 has been deprecated and will be removed in
+  January 2027. Java 7 and 8 will continue to be supported.
+- The generic multi-platform `codeql.zip` CLI distribution is deprecated and
+  will be removed in a future release. Download the per-platform
+  `codeql-PLATFORM.zip` for your platform instead. The CLI now emits a warning
+  when it is run from an all-platforms distribution; set
+  `CODEQL_ALLOW_ALL_PLATFORMS_DIST=true` to suppress it.
+
+## Release 2.26.4 (2026-08-26)
+
+### New Features
+
+- `codeql test run` now supports the `--reuse-dataset` option, which
+  reuses an existing test database from a previous run when available,
+  skipping database extraction. This can speed up repeated test runs
+  when only the query under test has changed. The option implies
+  `--keep-databases`.
+
+### Bug Fixes
+
+- The Java Autobuilder now expands project properties, such as
+  `${maven.version}`, when determining Maven version requirements specified
+  by the Maven Enforcer Plugin. The Java Autobuilder now also supports Maven
+  versions through 3.9.16.
+
+## Release 2.26.3 (2026-08-12)
+
+### Improvements
+
+- Commands that accept a `--ram` option now report a clear error when given a value that is far too large to be a sensible amount of memory in megabytes (for example, a number of bytes passed by mistake), instead of failing with a cryptic "is not an int" message.
+
+### Bug Fixes
+
+- Fixed the pack upload format to comply with the OCI-image-manifest specification, by ensuring that all required fields are present/valid, and that no extraneous/non-compliant fields are included.
+- Fixed path canonicalization on Windows so that paths located on `subst`ed drives are always resolved to their underlying target paths. Previously, `subst`ed drives were not handled consistently by the CodeQL CLI and the language-specific extractors.
+
+### Miscellaneous
+
+- Upgraded Jackson from 2.18.6 to 2.18.9.
+
+## Release 2.26.2 (2026-07-23)
+
+### Breaking Changes
+
+- Removed support for parsing `[[`-style links in alert messages. This was an undocumented legacy feature that allowed query authors to embed links inline in select clause message strings using `[["text"|"url"]]` syntax. Queries should use `$@` placeholder pairs instead.
+
+## Release 2.26.1 (2026-07-15)
+
+- There are no user-facing changes in this release.
+
+## Release 2.26.0 (2026-07-08)
+
+### Improvements
+
+- Improved the performance of commands that interact with Git repositories by checking whether the `git` command-line tool is available at most once per CodeQL CLI invocation.
+
+## Release 2.25.6 (2026-06-04)
+
+### Improvements
+
+- When the `git` executable is available, CodeQL can now obtain configuration and
+  queries from SHA-256 Git repositories, and infer Git metadata about them.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.11.
+
+## Release 2.25.5 (2026-05-21)
+
+- There are no user-facing changes in this release.
+
+## Release 2.25.4 (2026-05-05)
+
+- There are no user-facing changes in this release.
+
+## Release 2.25.3 (2026-04-30)
+
+### Improvements
+
+- The `codeql database finalize` command now accepts the `--working-dir`
+  flag. When specified, any extractor pre-finalize scripts will be run in
+  that directory. If the flag is not used, the scripts will run in the source
+  root directory (maintaining existing behavior). The flag will also be
+  automatically passed through when running the higher-level
+  `codeql database create` command.
+
+## Release 2.25.2 (2026-04-15)
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.10.
+
+## Release 2.25.1 (2026-03-27)
+
+### Bug Fixes
+
+- Fixed a bug where extraction could fail on YAML files containing emoji.
+
+### Miscellaneous
+
+- Upgraded snakeyaml (which is a dependency of jackson-dataformat-yaml) from 2.3 to 2.6.
+
+## Release 2.25.0 (2026-03-19)
+
+### Breaking Changes
+
+- `codeql database interpret-results` and `codeql database analyze` no longer attempt to reconstruct file baseline information from databases created with CLI versions before 2.11.2.
+
+### Bug Fixes
+
+- Upgraded Jackson library from 2.16.1 to 2.18.6 to address a high-severity denial of service vulnerability (GHSA-72hv-8253-57qq) in jackson-core's async JSON parser.
+- Upgraded snakeyaml (which is a dependency of jackson-dataformat-yaml) from 2.2 to 2.3.
+
+## Release 2.24.4 (2026-03-16)
+
+This release was skipped.
+
+## Release 2.24.3 (2026-03-05)
+
+### Bug Fixes
+
+- Fixed a race condition that could cause flaky failures in overlay CodeQL tests. Test extraction now skips `*.testproj` directories by name, preventing interference from concurrently cleaned-up test databases.
+- Fixed spurious "OOPS" warnings that could appear in help output for commands using mutually exclusive option groups, such as `codeql query run`.
+
+## Release 2.24.2 (2026-02-20)
+
+### Bug Fixes
+
+- Fixed SARIF output to generate RFC 1738 compatible file URIs. File URIs now always use the `file:///` format instead of `file:/` for better interoperability with SARIF consumers.
+
+## Release 2.24.1 (2026-02-05)
+
+### Miscellaneous
+
+- The vulnerable xwork-core 2.3.37 test dependency (CVE-2025-68493) has been removed. The CodeQL Java library has been updated to support both legacy Struts 2.x-6.x package names and Struts 7.x package names for analyzing user code.
+
+## Release 2.24.0 (2026-01-26)
+
+### Miscellaneous
+
+- The OWASP Java HTML Sanitizer library used by the CodeQL CLI for internal
+  documentation generation commands has been updated to version
+  [20260102.1](https://github.com/OWASP/java-html-sanitizer/releases/tag/release-20260102.1).
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.9.
+
+## Release 2.23.9 (2026-01-09)
+
+### Deprecations
+
+- Support for Kotlin version 1.6 and 1.7 has been deprecated and will be removed from CodeQL version 2.24.1. Starting with version 2.24.1, users will need to use Kotlin version >= 1.8 to extract Kotlin databases.
+
+## Release 2.23.8 (2025-12-10)
+
+This release contains no CLI changes.
+
+## Release 2.23.7 (2025-12-05)
+
+### Deprecations
+
+- The `--save-cache` flag to `codeql database run-queries` and other commands that execute queries has been deprecated. This flag previously instructed the evaluator to aggressively write intermediate results to the disk cache, but now has no effect.
+
+## Release 2.23.6 (2025-11-24)
+
+### Breaking changes
+
+- The LGTM results format for uploading to LGTM has been removed.
+
+## Release 2.23.5 (2025-11-13)
+
+### Breaking changes
+
+- In order to make a `@kind path-problem` query diff-informed, the `getASelectedSourceLocation` and `getASelectedSinkLocation` predicates in the dataflow configuration now need to be overridden to always return the location of the source/sink _in addition to_ any other locations that are selected by the query. See the [QLdoc](https://github.com/github/codeql/blob/d122534398c5eb9182a23a9ad65caa5937d627b5/shared/dataflow/codeql/dataflow/DataFlow.qll#L474) for more details.
+
+## Release 2.23.4
+
+This release was skipped.
+
+## Release 2.23.3 (2025-10-17)
+
+### Breaking changes
+
+- The `--permissive` command line option has been removed from the C/C++ extractor,
+  and passing the option will make the extractor fail. The option was introduced to
+  make the extractor accept the following invalid code, which is accepted by gcc with
+  the `-fpermissive` flag:
+
+  ```cpp
+  void f(char*);
+  void g() {
+    const char* str = "string";
+    f(str);
+  }
+  ```
+
+  The `--permissive` option was removed, as under some circumstances it would break the extractor's ability to parse valid C++ code. When calling the extractor directly,
+  `--permissive` should no longer be passed. The above code will fail to parse, and we
+  recommend the code being made `const`-correct.
+
+### Bugs fixed
+
+- Fixed a bug that made many `codeql` subcommands fail with the
+  message `not in while, until, select, or repeat loop` on Linux or
+  macOS systems where `/bin/sh` is `zsh`.
+
+## Release 2.23.2 (2025-10-02)
+
+### New features
+
+- CodeQL Go analysis now supports the "Git Source" type for [private package registries](https://docs.github.com/en/code-security/securing-your-organization/enabling-security-features-in-your-organization/giving-org-access-private-registries). This is in addition to the existing support for the "GOPROXY server" type.
+
+### Bugs Fixed
+
+- The `codeql generate query-help` command now prepends the query's name (taken from the `.ql` file) as a level-one heading when processing markdown query help, for consistency with help generated from a `.qhelp` file.
+
+## Release 2.23.1 (2025-09-23)
+
+### New features
+
+- CodeQL now adds the sources and sinks of path alerts to the `relatedLocations`
+  property of SARIF results if they are not included as the primary location or
+  within the alert message. This means that path alerts will show on PRs if a
+  source or sink is added or modified, even for queries that don't follow the
+  common convention of selecting the sink as the primary location and mentioning
+  the source in the alert message.
+
+- CodeQL now populates file coverage information for GitHub Actions on
+  [the tool status page for code scanning](https://docs.github.com/en/code-security/code-scanning/managing-your-code-scanning-configuration/about-the-tool-status-page#viewing-the-tool-status-page-for-a-repository).
+
+## Release 2.23.0 (2025-09-04)
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.8.
+
+## Release 2.22.4 (2025-08-21)
+
+- There are no user-facing changes in this release.
+
+## Release 2.22.3 (2025-08-06)
+
+### New features
+
+- The `codeql database cleanup` command now takes the `--cache-cleanup=overlay`
+  option, which trims the cache to just the data that will be useful when
+  evaluating against an overlay.
+
+## Release 2.22.2 (2025-07-29)
+
+### Bug fix
+
+- Fixes a bug in query suites where the `version` property of an `import` instruction was ignored. Previously, the following query suite would _not_ resolve to `v1.0.19` of `codeql/csharp-queries`. Instead it would resolve to the latest version. This is now fixed and the resolve pack version would be `v1.0.19`.
+  ```
+   - from: codeql/csharp-queries
+     import: codeql-suites/csharp-security-and-quality.qls
+     version: 1.0.19
+  ```
+
+## Release 2.22.1 (2025-06-26)
+
+### New features
+
+- Rust language support is now in public preview.
+
+### Miscellaneous
+
+- The version of `jgit` used by the CodeQL CLI has been updated to `6.10.1.202505221210-r`.
+
+## Release 2.22.0 (2025-06-11)
+
+### Breaking changes
+
+- A number of breaking changes have been made to the C and C++ CodeQL test
+  environment as used by `codeql test run`:
+  - Options starting with a `/` are no longer supported by
+    `semmle-extractor-options`. Any option starting with a `/` should be
+    replaced by the equivalent option starting with a `-`, e.g., `/D` should be
+    replaced by `-D`.
+  - Preprocessor command line options of the form `-D<macro>#<def>` are no
+    longer supported by `semmle-extractor-options`. `-D<macro>=<def>` should be
+    used instead.
+  - The `/Fp` and `-o` options are no longer supported by
+    `semmle-extractor-options`. The options should be omitted.
+  - The `-emit-pch`, `-include-pch`, `/Yc`, and `/Yu` options, and the
+    `--preinclude` option taking a pre-compiled header as its argument, are no
+    longer supported by `semmle-extractor-options`. Any test that makes use of
+    this should be replaced by a test that invokes the CodeQL CLI with the
+    `create database` option and that runs the relevant queries on the created
+    database.
+
+## Release 2.21.4 (2025-06-02)
+
+### Deprecations
+
+- The `clang_vector_types`, `clang_attributes`, and `flax-vector-conversions` command
+  line options have been removed from the C/C++ extractor. These options were introduced
+  as workarounds to frontend limitations in earlier versions of the extractor and are
+  no longer needed when calling the extractor directly.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.7.
+
+## Release 2.21.3 (2025-05-15)
+
+### Miscellaneous
+
+- Windows binaries for the CodeQL CLI are now built with `/guard:cf`, enabling [Control Flow Guard](https://learn.microsoft.com/en-us/windows/win32/secbp/control-flow-guard).
+
+## Release 2.21.2 (2025-05-01)
+
+### Bugs fixed
+
+- `codeql generate log-summary` now correctly includes `dependencies`
+  maps in predicate events for `COMPUTED_EXTENSIONAL` predicates.
+
+## Release 2.21.1 (2025-04-22)
+
+### Bugs fixed
+
+- Fixed a bug in CodeQL analysis for GitHub Actions in the presence
+  of a code scanning configuration file containing `paths-ignore`
+  exclusion patterns but not `paths` inclusion patterns.
+  Previously, such a configuration incorrectly led to all YAML, HTML,
+  JSON, and JS source files being extracted,
+  except for those filtered by `paths-ignore`.
+  This in turn led to performance issues on large codebases.
+  Now, only workflow and Action metadata YAML files relevant to the
+  GitHub Actions analysis will be extracted,
+  except for those filtered by `paths-ignore`.
+  This matches the default behavior when no configuration file
+  is provided.
+  The handling of `paths` inclusion patterns is unchanged:
+  if provided, only those paths will be considered,
+  except for those filtered by `paths-ignore`.
+
+## Release 2.21.0 (2025-04-03)
+
+### Miscellaneous
+
+- On macOS the `CODEQL_TRACER_RELOCATION_EXCLUDE` environment variable can now be used to exclude certain paths from the
+  tracer relocation and tracing process. This environment variable accepts newline-separated regex patterns of binaries
+  to be excluded.
+
+## Release 2.20.7 (2025-03-18)
+
+- There are no user-facing changes in this release.
+
+## Release 2.20.6 (2025-03-06)
+
+### Miscellaneous
+
+- The CodeQL XML extractor is now able to parse documents in a wider array of
+  character sets.
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.6.
+
+## Release 2.20.5 (2025-02-20)
+
+### Breaking changes
+
+- Removed support for `QlBuiltins::BigInt`s in the `avg()` aggregate.
+
+- A number of breaking changes have been made to the C and C++ CodeQL test environment as used by `codeql test run`:
+  - The `-Xclang-only=<arg>` option is no longer supported by `semmle-extractor-options`. Instead, when either `--clang` or `--clang_version` is specified the option should be replaced by `<arg>` only, otherwise the option should be omitted.
+  - The `--sys_include <arg>` and `--preinclude <arg>` options are no longer supported by `semmle-extractor-options`. Instead, `--edg <option_name> --edg <arg>` should be specified.
+  - The `-idirafter <arg>` option is no longer supported by `semmle-extractor-options`. Instead, `--edg --sys_include --edg <arg>` should be specified.
+  - The `-imacros <arg>` option is no longer supported by `semmle-extractor-options`. Instead, `--edg --preinclude_macros --edg <arg>` should be specified.
+  - The `/FI <arg>` option is no longer supported by `semmle-extractor-options`. Instead, `--edg --preinclude --edg <arg>` should be specified.
+  - The `-Wreserved-user-defined-literal`, `-Wno-reserved-user-defined-literal`, `-fwritable-strings`, `/Zc:rvalueCast`, `/Zc:rvalueCast-`, and `/Zc:wchar_t-` options are no longer supported by `semmle-extractor-options`. Instead, `--edg --reserved_user_defined_literal`, `--edg --no-reserved_user_defined_literal`, `--edg --no_const_string_literals`, `--edg --no_preserve_lvalues_with_same_type_casts`, `--edg --preserve_lvalues_with_same_type_casts`, and `--edg --no_wchar_t_keyword` should be specified, respectively.
+  - The `/Fo <arg>` option is no longer supported by `semmle-extractor-options`. The option should be omitted.
+
+## Release 2.20.4 (2025-02-06)
+
+### New features
+
+- Using the `actions` language (for analysis of GitHub Actions workflows) no longer requires
+  the `CODEQL_ENABLE_EXPERIMENTAL_FEATURES` environment variable to be set. Support for analysis
+  of GitHub Actions workflows remains in public preview.
+
+### Bugs fixed
+
+- Fixed a bug where CodeQL for Java would fail with an SSL exception while trying to download `maven`.
+
+### Miscellaneous
+
+- The build of the [logback-core](https://logback.qos.ch/) library that is used for logging in the CodeQL CLI has been updated to version 1.3.15.
+
+## Release 2.20.3 (2025-01-24)
+
+### Security Updates
+
+- Resolves a security vulnerability where CodeQL databases or logs produced by the CodeQL CLI may contain the environment variables from the time of
+  database creation. This includes any secrets stored in an environment variables. For more information, see the
+  [CodeQL CLI security advisory](https://github.com/github/codeql-cli-binaries/security/advisories/GHSA-gqh3-9prg-j95m).
+
+  All users of CodeQL should follow the advice in the CodeQL advisory mentioned above or upgrade to this version or a later version of CodeQL.
+
+  If you are using the CodeQL Action, also see the related [CodeQL Action security advisory](https://github.com/github/codeql-action/security/advisories/GHSA-vqf5-2xx6-9wfm).
+
+## Release 2.20.2 (2025-01-22)
+
+### Improvements
+
+- `codeql database create` and `codeql database finalize` now write relations to disk in a new, compressed format. As a result, databases will generally take up less space on disk, whether zipped or unzipped. Note that databases in this format can only be read and analyzed using CodeQL version 2.20.1 onwards. Attempting to analyze such a database with CodeQL version 2.20.0 or older will fail, with an error message like the following:
+  ```
+  UnsortedExtensionalError: Tuples that were assumed to be in order are not: [123456777, 777654321, 123456777]<[777654321, 123456777, 777654321]
+  ```
+
+### Enhancements
+
+- Added the `.bitLength()` method to `QlBuiltins::BigInt`.
+
+### Bugs Fixed
+
+- Fixed a bug where CodeQL would crash on rare occasions while merging SARIF files before uploading results.
+
+## Release 2.20.1 (2025-01-09)
+
+### Improvements
+
+- Automatic installation of dependencies for C++ autobuild is now supported on Ubuntu 24.04.
+
+- The CLI will now warn if it detects that it is installed in a
+  location where it is likely to cause performance issues. This
+  includes: user home, desktop, downloads, or the file system root.
+
+  You can avoid this warning by setting the `CODEQL_ALLOW_INSTALLATION_ANYWHERE`
+  environment variable to `true`.
+
+## Release 2.20.0 (2024-12-09)
+
+### Known issues
+
+- The Windows executable for this release is labeled with an incorrect version number
+  within its properties: the version number should be 2.20.0 rather than 2.19.4.
+  `codeql version` reports the correct version number.
+
+### New features
+
+- The [`QlBuiltins::BigInt` type](https://codeql.github.com/docs/ql-language-reference/modules/#bigint) of
+  arbitrary precision integers is generally available and no longer hidden behind the
+  `--allow-experimental=bigint` CLI feature flag.
+
+### Miscellaneous
+
+- Backslashes are now escaped when writing output in the Graphviz DOT format (`--format=dot`).
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL CLI has been updated to version
+  21.0.5.
+
+## Release 2.19.4 (2024-12-02)
+
+### Improvements
+
+- CodeQL now supports passing values containing the equals character (`=`) to extractor options via
+  the `--extractor-option` flag. This allows cases like `--extractor-option opt=key=value`, which
+  sets the extractor option `opt` to hold the value `key=value`, whereas previously that would have
+  been rejected with an error.
+- The `codeql pack bundle` command now sets the numeric user and group IDs of entries in the generated
+  `tar` archive to `0`. This avoids failures like `IllegalArgumentException: user id '7111111' is too big ( > 2097151 )`
+  when the numeric user ID is too large.
+
+### Bugs fixed
+
+- On MacOS, `arch -arm64` commands no longer fail when they are executed via `codeql database create --command`,
+  via `codeql database trace-command`, or are run after `codeql database init --begin-tracing`. Note
+  that build commands invoked this way still will not normally be traced, so this is useful only for
+  running ancillary commands which are incidental to building your code.
+- Fixed a bug where `codeql test run` would not preserve test
+  databases on disk after a test failed.
+
+## Release 2.19.3 (2024-11-07)
+
+### Bugs fixed
+
+- Fixed a bug where using `codeql database import` to combine multiple non-empty
+  databases may produce a corrupted database. (The bug does not affect using
+  `codeql database finalize --additional-dbs` to combine multiple databases.)
+
+- Fixed a bug where uses of a `QlBuiltins::ExtensionId` variable that was not
+  bound to a value could be incorrectly accepted in some cases. In many cases,
+  this would result in a crash.
+
+- CodeQL would sometimes refuse to run with more than around 1,500 GB of RAM
+  available, complaining that having so much memory was "unrealistic". The
+  amount of memory CodeQL is able to make any meaningful use of still tops out
+  at about that value, but it will now gracefully accept that so large
+  computers do in fact exist.
+
+- Fixed a bug in command-line parsing where a misspelled option could sometimes
+  be misinterpreted as, e.g., the name of a query to run. Now every command-line
+  argument that begins with a dash is assumed to be intended as an option
+  (unless it comes after the `--` separator), and an appropriate error is
+  emitted if that is not a recognized one.
+
+  The build command in `codeql database trace-command` is exempted from this for
+  historical reasons, but we strongly recommend putting a `--` before the entire
+  build command there, in case a future `codeql` version starts recognizing
+  options that you intended to be part of the build command.
+
+### Miscellaneous
+
+- The CodeQL Bundle is now available as an artifact that is compressed using
+  [Zstandard](https://en.wikipedia.org/wiki/Zstd). This artifact is
+  smaller and faster to decompress than the original, gzip-compressed bundle. The CodeQL bundle
+  is a tar archive containing tools, scripts, and various CodeQL-specific files.
+
+  If you are currently using the CodeQL Bundle, you may want to consider switching to the
+  Zstandard variant of the bundle. You can download the new form of the CodeQL Bundle from the
+  [codeql-action releases page](https://github.com/github/codeql-action/releases/tag/codeql-bundle-v2.19.3)
+  by selecting the appropriate bundle with the `.zst` extension. The gzip-compressed bundles will
+  continue to be available for backwards compatibility.
+
+## Release 2.19.2 (2024-10-21)
+
+### Potentially breaking changes
+
+- The Python extractor will no longer extract the standard library by default, relying instead on models of the standard library. This should result in significantly faster extraction and analysis times, while the effect on alerts should be minimal. It will for a while be possible to force extraction of the standard library by setting the environment variable `CODEQL_EXTRACTOR_PYTHON_EXTRACT_STDLIB` to `1`.
+
+### Bugs fixed
+
+- The 2.19.1 release contained a bug in the query evaluator that under rare conditions could lead to wrong alerts or resource exhaustion. Although we have never seen the problem outside of internal testing, we encourage users on 2.19.1 to upgrade to 2.19.2.
+
+### Miscellaneous
+
+- The database relation `sourceLocationPrefix` is changed for databases created with
+  `codeql test run`. Instead of containing the path of the enclosing qlpack, it now
+  contains the actual path of the test, similar to if one had run `codeql database create`
+  on the test folder. For example, for a test such as
+  `<checkout>/cpp/ql/test/query-tests/Security/CWE/CWE-611/XXE.qlref` we now populate
+  `sourceLocationPrefix` with `<checkout>/cpp/ql/test/query-tests/Security/CWE/CWE-611/`
+  instead of `<checkout>/cpp/ql/test/`. This change typically impacts calls to
+  `File.getRelativePath()`, and may as a result change the expected test output.
+
+## Release 2.19.1 (2024-10-04)
+
+### New Features
+
+- The command `codeql generate query-help` now supports Markdown help files.
+  The Markdown help format is commonly used in custom CodeQL query packs. This new
+  feature allows us to generate SARIF reporting descriptors for CodeQL queries that
+  include Markdown help directly from a query Markdown help file.
+
+- Added a new command, `codeql resolve packs`. This command shows each step in the
+  pack search process, including what packs were found in each step. With the
+  `--show-hidden-packs` option, it can also show details on which packs were hidden
+  by packs found earlier in the search sequence. `codeql resolve packs` is intended
+  as a replacement for most uses of `codeql resolve qlpacks`, whose output is both
+  less detailed and less accurate.
+
+## Release 2.19.0 (2024-09-18)
+
+### Improvements
+
+- `codeql database analyze` and `codeql database interpret-results` now support
+  the `--sarif-run-property` option. You can provide this option when using a SARIF
+  output format to add a key-value pair to the property bag of the run object.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.4.
+
+## Release 2.18.4 (2024-09-12)
+
+### New Features
+
+- C# support for `build-mode: none` is now out of beta, and generally available.
+- Go 1.23 is now supported.
+
+## Release 2.18.3 (2024-08-28)
+
+- There are no user-facing changes in this release.
+
+## Release 2.18.2 (2024-08-13)
+
+### Deprecations
+
+- Swift analysis on Ubuntu is no longer supported. Please migrate to macOS if this affects you.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.3.
+
+## Release 2.18.1 (2024-07-25)
+
+### Security Updates
+
+- Resolves CVE-2023-4759, an arbitrary file overwrite in Eclipse JGit
+  that can be triggered when using untrusted third-party queries from a
+  git repository. See the
+  [security advisory](https://github.com/github/codeql-cli-binaries/security/advisories/GHSA-x4gx-f2xv-6wj9)
+  for more information.
+- The following dependencies have been updated. These updates include
+  security fixes in the respective libraries that prevent
+  out-of-bounds accesses or denial-of-service in scenarios where
+  untrusted files are processed. These scenarios are not likely to be
+  encountered in most uses of CodeQL and code scanning, and only
+  apply to advanced use cases where precompiled query packs,
+  database ZIP files, or database TRAP files are obtained from
+  untrusted sources and then processed on a trusted machine.
+    - airlift/aircompressor is updated to version 0.27.
+    - Apache Ant is updated to version 1.10.11.
+    - Apache Commons Compress is updated to version 1.26.0.
+    - Apache Commons IO is updated to version 2.15.1.
+    - Apache Commons Lang3 is updated to version 3.14.0.
+    - jsoup is updated to version 1.15.3.
+    - Logback is updated to version 1.2.13.
+    - Snappy is updated to version 0.5.
+
+### New features
+
+- The *experimental* type `QlBuiltins::BigInt` of arbitrary-precision integers
+  has been introduced. To opt in to this API, compile your queries with
+  `--allow-experimental=bigint`. Big integers can be constructed using the
+  `.toBigInt()` methods of `int` and `string`. The built-in operations are:
+  - comparisons: `=`, `!=`, `<`, `<=`, `>`, `>=`,
+  - conversions: `.toString()`, `.toInt()`,
+  - arithmetic: binary `+`, `-`, `*`, `/`, `%`, unary `-`,
+  - bitwise operations: `.bitAnd(BigInt)`, `.bitOr(BigInt)`,
+    `.bitXor(BigInt)`, `.bitShiftLeft(int)`, `.bitShiftRightSigned(int)`,
+    `.bitNot()`,
+  - aggregates: `min`, `max`, (`strict`)`sum`, (`strict`)`count`, `avg`,
+    `rank`, `unique`, `any`.
+  - other: `.pow(int)`, `.abs()`, `.gcd(BigInt)`, `.minimum(BigInt)`,
+    `.maximum(BigInt)`.
+- `codeql test run` now supports postprocessing of test results. When .qlref
+  files specify a path to a `postprocess` query, then this is evaluated after
+  the test query to transform the test outputs prior to concatenating them into
+  the `actual` results.
+
+### Improvements
+
+- The 30% QL query compilation slowdown noted in 2.18.0 has been fixed.
+
+## Release 2.18.0 (2024-07-11)
+
+### Breaking changes
+
+- A number of breaking changes have been made to the C and C++ CodeQL
+  test environment as used by `codeql test run`:
+  - The test environment no longer defines any GNU-specific builtin
+    macros. If these macros are still needed by a test, please define
+    them via `semmle-extractor-options`.
+  - The `--force-recompute` option is no longer directly supported by
+    `semmle-extractor-options`. Instead, `--edg --force-recompute`
+    should be specified.
+  - The `--gnu_version` and `--microsoft_version` options that can be
+    specified via `semmle-extractor-options` are now synonyms, and only
+    one should be specified as part of `semmle-extractor-options`.
+    Furthermore,  is also no longer possible to specify these options
+    via the following syntax.
+
+    - `--edg --gnu_version --edg <version number>`, and
+    - `--edg --microsoft_version --edg <version number>`
+
+    The shorter `--gnu_version <version number>` and
+    `--microsoft_version <version number>` should be used.
+- The `--build_error_dir` and `--predefined_macros` command line options
+  have been removed from the C/C++ extractor. It has never been possible
+  to pass these options through the CLI, but some customers with advanced
+  setups may have been passing them through internal undocumented interfaces.
+  Passing the option `--build_error_dir` did not have any effect, and it
+  is safe to remove the option. The `--predefined_macros` option should
+  have been unnecessary, as long as the extractor was invoked with the
+  `--mimic` option.
+
+### Regressions
+
+- Compilation of QL queries is about 30% slower than in previous releases. This only affects users who write custom queries, and only at compilation time, not at run time. This regression will be fixed in the upcoming 2.18.1 release.
+
+### Improvements
+
+- Introduced the `--include-logs` option to the `codeql database bundle`
+  command. This new feature allows users to include logs in the generated
+  database bundle, allowing for a more complete treatment of the bundle, and
+  bringing the tool capabilities up-to-speed with the documentation.
+- `codeql database init` and `codeql database create` now support the
+  `--force-overwrite` option. When this option is specified, the command will
+  delete the specified database directory even if it does not look like a
+  database directory. This option is only recommended for automation. For
+  directcommand line commands, it is recommended to use the `--overwrite`
+  option, which includes extra protection and will refuse to delete a
+  directory that does not look like a database directory.
+- Extract `.xsaccess`, `*.xsjs` and `*.xsjslib` files for SAP HANA XS as
+  Javascript.
+- We have updated many compiler error messages and warnings to improve their
+  readability and standardize their grammar.
+  Where necessary, please use the `--learn` option for the `codeql test run`
+  command.
+
+### Bugs fixed
+
+- Where a MacOS unsigned binary cannot be signed, CodeQL will now continue
+  trying to trace compiler invocations created by that process and its
+  children. In particular this means that Bazel builds on MacOS are now
+  traceable.
+- Fixed a bug where test discovery would fail if there is a syntax error in a
+  qlpack file. Now, a warning message will be printed and discovery will
+  continue.
+
+## Release 2.17.6 (2024-06-27)
+
+### New features
+
+- Beta support is now available for analyzing C# codebases without needing a working build. To use
+  this, pass the `--build-mode none` option to `codeql database create`.
+
+### Improvements
+
+- The `--model-packs` option is now publicly available. This option allows commands like `codeql database analyze`
+  to accept a list of model packs that are used to augment the analysis of all queries involved in the analysis.
+
+## Release 2.17.5 (2024-06-12)
+
+### Breaking changes
+
+- All the commands that output SARIF will output a minified version to reduce the size.
+  The `codeql database analyze`, `codeql database interpret-results`, `codeql generate query-help`, and `codeql bqrs interpret` commands support the option `--no-sarif-minify` to output a pretty printed SARIF file.
+
+- A number of breaking changes have been made to the `semmle-extractor-options`
+  functionality available for C and C++ CodeQL tests.
+
+  - The Arm, Intel, and CodeWarrior compilers are no longer supported and the
+    `--armcc`, `--intel`, `--codewarrior` flags are now ignored, as are all the
+    flags that only applied to those compilers.
+  - The `--threads` and `-main-file-name` options, which did not have any effect
+    on tests, are now ignored. Any specification of these options as part of
+    `semmle-extractor-options` should be removed.
+  - Support for `--linker`, all flags that would only invoke the preprocessor,
+    and the `/clr` flag have been removed, as those flags would never produce any
+    usable test output.
+  - Support for the `--include_path_environment` flag has been removed. All include
+    paths should directly be specified as part of `semmle-extractor-options`.
+  - Microsoft C/C++ compiler response files specified via `@some_file_name` are
+    now ignored. Instead, all options should directly be specified as part of
+    `semmle-extractor-options`.
+  - Support for Microsoft `#import` preprocessor directive has been removed, as
+    support depends on the availability of the Microsoft C/C++ compiler, and
+    availability cannot be guaranteed on all platforms while executing tests.
+  - Support for the Microsoft `/EHa`, `/EHs`, `/GX`, `/GZ`, `/Tc`, `/Tp`, and `/Zl`
+    flags, and all `/RTC` flags have been removed. Any specification of these
+    options as part of `semmle-extractor-options` should be removed.
+  - Support for the Apple-specific `-F` and `-iframework` flags has been removed.
+    The `-F` flag can still be used by replacing `-F <directory>` by
+    `--edg -F --edg <directory>`. Any occurrence of `-iframework <arg>` should be
+    replaced by `--edg --sys_framework --edg <arg>`.
+  - Support for the `/TC`, `/TP`, and `-x` flags has been removed. Please ensure
+    all C, respectively C++, source files have a `.c`, respectively `.cpp`,
+    extension.
+  - The `--build_error_dir`, `-db`, `--edg_base_dir`, `--error_limit`,
+    `--src_archive`, `--trapfolder`, and `--variadic_macros` flags are now ignored.
+
+  The above changes do not affect the creation of databases through the CodeQL CLI,
+  or when calling the C/C++ extractor directly with the `--mimic` or `--linker` flags.
+  Similar functionality continues to be supported in those scenarios, except for
+  CodeWarrior and the `--edg_base_dir`, `--include_path_environment`, `/Tc`, and `/Tp`
+  flags, which were never supported.
+
+### Improvements
+
+- `codeql generate log-summary` now reports completed pipeline runs that
+  are part of an incomplete recursive predicate.
+
+### Miscellaneous
+
+- The OWASP Java HTML Sanitizer library used by the CodeQL CLI for internal
+  documentation generation commands has been updated to version
+  [20240325.1](https://github.com/OWASP/java-html-sanitizer/releases/tag/release-20240325.1).
+
+## Release 2.17.4 (2024-06-03)
+
+### New features
+
+- CodeQL package management is now generally available, and all GitHub-produced
+  CodeQL packages have had their version numbers increased to 1.0.0.
+
+## Release 2.17.3 (2024-05-17)
+
+### Improvements
+
+- The language server that our IDE integration is built on now defaults
+  to fine-grained dependency tracking for incremental error-checking
+  after file changes. This slightly improves the latency of refreshing
+  errors after local source code edits and will enable significant
+  speedups in the future.
+- We now properly handle globs (such as `folder/**/*.py`) in `paths` configuration
+  to specify what files to include for Python analysis (see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning#specifying-directories-to-scan).
+- TRAP import (a part of `codeql database create` and `codeql database finalize`)
+  now supports allocating 2^32 IDs during the import process. The previous limit
+  was 2^31 IDs.
+
+## Release 2.17.2 (2024-05-07)
+
+### Known issues
+
+- The beta support for analyzing Swift in this release and all
+  previous releases requires `g++-13` when running on Linux. Users
+  analyzing Swift using the `ubuntu-latest`, `ubuntu-22.04`, or
+  `ubuntu-20.04` runner images for GitHub Actions should update their
+  workflows to install `g++-13`. For more information, see [the runner
+  images
+  announcement](https://github.com/actions/runner-images/issues/9679).
+
+### Improvements
+
+- When uploading a SARIF file to GitHub using `codeql github
+  upload-results`, the CodeQL CLI now waits for the file to be
+  processed by GitHub. If any errors occurred during processing of the
+  analysis results, the command will log these and return a non-zero
+  exit code. To disable this behaviour, pass the
+  `--no-wait-for-processing` flag.
+
+  By default, the command will wait for the SARIF file to be processed
+  for a maximum of 2 minutes, however this is configurable with the
+  `--wait-for-processing-timeout` option.
+- The build tracer is no longer enabled when using the [`none` build
+  mode](https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages#codeql-build-modes)
+  to analyze a compiled language, thus improving performance.
+
+## Release 2.17.1 (2024-04-24)
+
+### Deprecations
+
+- The `--mode` option and `-m` alias to `codeql database create`,
+  `codeql database cleanup`, and `codeql dataset cleanup` has been
+  deprecated. Instead, use the new `--cache-cleanup` option, which has
+  identical behavior.
+
+### Improvements
+
+- Improved the diagnostic message produced when no code is processed
+  when creating a database. If a build mode was specified using
+  `--build-mode`, the message is now tailored to your build mode.
+
+### Miscellaneous
+
+- The `scc` tool used by the CodeQL CLI to calculate source code baseline
+  information has been updated to version [3.2.0](https://github.com/boyter/scc/releases/tag/v3.2.0).
+
+## Release 2.17.0 (2024-04-04)
+
+### Deprecations
+
+- The `--[no-]analysis-summary-v2` and `--[no-]new-analysis-summary` options
+  that were used to enable (or disable) improved summary information printed at
+  the end of a `codeql database analyze` invocation are no longer supported.
+  Improved summary information is now enabled for all invocations.
+- Support for overwriting default CodeQL SARIF run properties using the
+  `--sarif-run-property` command line option has been removed. This removes the
+  ability to overwrite the `semmle.formatSpecifier`, `metricResults`, and
+  `codeqlConfigSummary` properties in the SARIF run file.
+
+### Improvements
+
+- TRAP import (a part of `codeql database create` and `codeql database finalize`)
+  now performs better in low-memory situations. (Put another way, it now needs
+  less RAM to achieve the same performance as before.)
+
+- The worst-case performance of transitive closure computation (using
+  the `+` or `*` postfix operators or the `fastTC` higher-order
+  primitive in QL) has been greatly improved.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is used to run the CodeQL
+  CLI has been updated to version 21.0.2.
+
+## Release 2.16.6 (2024-03-26)
+
+### Bugs fixed
+
+- Fixes a bug where extractor logs would be output at a lower than expected
+  verbosity level when using the `codeql database create` command.
+
+## Release 2.16.5 (2024-03-21)
+
+### New features
+
+- Beta support has been added for analyzing Java codebases without needing a working build. To enable
+  this, pass the `--build-mode none` option to `codeql database create`.
+
+## Release 2.16.4 (2024-03-11)
+
+### Potentially breaking changes
+
+- A number of internal command line options (`--builtin_functions_file`, `--clang_builtin_functions`,
+  `--disable-objc-default-synthesize-properties`, `--list_builtin_functions`, `--memory-limit-bytes`,
+  `--mimic_config`, and `--objc`) has been removed from the C/C++ extractor. It has never been
+  possible to pass these options through the CLI itself, but some customers with advanced setups may
+  have been passing them through internal undocumented interfaces. All of the removed options were
+  already no-ops, and will now generate errors.
+
+  The `--verbosity` command line option has also been removed. The option was an alias for
+  `--codeql-verbosity`, which should be used instead.
+
+### Improvements
+
+- The frontend of the C/C++ extractor has been updated, improving the
+  extractor's reliability and increasing its ability to extract source code.
+
+### Bugs fixed
+
+- When parsing user-authored YAML files such as `codeql-pack.yml`,
+  `qlpack.yml`, `codeql-workspace.yml`, and any YAML file defining a data
+  extension, unquoted string values starting with a `*` character are now
+  correctly interpreted as YAML aliases. Previously, they were interpreted
+  as strings, but with the first character skipped.
+
+  If you see a parse error similar to `while scanning an alias... unexpected`
+  `character found *(42)`,it likely means that you need to add quotes around
+  the indicated string value. The most common cause is unquoted glob patterns
+  that start with `*`, such as `include: **/*.yml`, which will need to be
+  quoted as `include: "**/*.yml"`.
+
+## Release 2.16.3 (2024-02-22)
+
+### Security patches
+
+- Fixes CVE-2024-25129, a limited data exfiltration vulnerability that
+  could be triggered by untrusted databases or QL packs.  See the
+  [security advisory](https://github.com/github/codeql-cli-binaries/security/advisories/GHSA-gf8p-v3g3-3wph)
+  for more information.
+
+### New Features
+
+- A new extractor option has been added to the Python extractor:
+  `python_executable_name`. You can use this option to override the default
+  process the extractor uses to find and select a Python executable. Pass one of
+  `--extractor-option python_executable_name=py` or `--extractor-option
+  python_executable_name=python` or `--extractor-option
+  python_executable_name=python3` to commands that run the extractor, for
+  example: `codeql database create`.
+
+  On Windows machines, the Python extractor will expect to find `py.exe` on the
+  system `PATH` by default. If the Python executable has a different name, you
+  can set the new extractor option to override this value and look for
+  `python.exe` or `python3.exe`.
+
+  For more information about using the extractor option with the CodeQL CLI, see
+  [Extractor
+  options](https://docs.github.com/en/code-security/codeql-cli/using-the-advanced-functionality-of-the-codeql-cli/extractor-options).
+
+### Bugs fixed
+
+- Fixed a bug where CodeQL may produce an invalid database when it exhausts
+  all available ID numbers. Now it detects the condition and reports an
+  error instead.
+
+## Release 2.16.2 (2024-02-12)
+
+- There are no user-facing changes in this release.
+
+## Release 2.16.1 (2024-01-25)
+
+### Improvements
+
+- When executing the `codeql database init` command, the CodeQL runner
+  executable path is now stored in the `CODEQL_RUNNER` environment variable.
+  Users of indirect tracing on MacOS with System Integrity Protection enabled
+  who previously had trouble with indirect tracing should prefix their build
+  command with this path. For example, `$CODEQL_RUNNER build.sh`.
+
+### QL language improvements
+
+- Name clashes between weak aliases (i.e. aliases that are not final aliases of
+  non-final entities) of the same target no longer cause ambiguity errors.
+
+## Release 2.16.0 (2024-01-16)
+
+### New Features
+
+- Users specifying extra tracing configurations may now use the `GetRegisteredMatchers(languageId)` Lua function to retrieve the existing table of matchers registered to a given language.
+
+### Improvements
+
+- The `Experimental` flag has been removed from all packaging and related commands.
+- The RA pretty-printer omits names of internal RA nodes and pretty-prints
+  binary unions with nested internal unions as n-ary unions. VS Code extension
+  v1.11.0 or newer is required to compute join order badness metrics in VS Code
+  for the new RA format.
+
+
+### Potentially breaking changes
+
+- The Python extractor will no longer extract dependencies by default. See https://github.blog/changelog/2023-07-12-code-scanning-with-codeql-no-longer-installs-python-dependencies-automatically-for-new-users/ for more context. In versions until 2.17.0, it will be possible to restore the old behavior by setting `CODEQL_EXTRACTOR_PYTHON_FORCE_ENABLE_LIBRARY_EXTRACTION_UNTIL_2_17_0=1`.
+- The `--ram` option to `codeql database run-queries` and other
+  commands that execute queries is now interpreted more strictly.
+  Previously it was mostly a rough hint for how much memory to use,
+  and the actual memory footprint of the CodeQL process could be
+  hundreds of megabytes higher. From this release, CodeQL tries harder
+  to keep its _total_ memory consumption during evaluation below the
+  given limit.
+
+  The new behavior yields more predictable memory use, but since it
+  works by allocating less RAM, it can lead to more use of _disk_
+  storage for intermediate results compared to earlier releases with
+  the same `--ram` value, and consequently a slight performance
+  loss. In rare cases, for large databases, analysis may fail with a
+  Java `OutOfMemoryError`.
+
+  The cure for this is to increase `--ram` to be closer to the amount
+  of memory actually available for CodeQL. As a rule of thumb, it will
+  usually be possible to increase the value of `--ram` by 700 MB or
+  more, without actually using more resources than release 2.15.x
+  would with the old setting. An exact amount cannot stated, however,
+  since the actual memory footprint in earlier releases depended on
+  factors such as the size of the databases that were not fully taken
+  into account.
+
+  If you use the CodeQL Action, you do not need to do anything unless
+  you have manually overridden the Action's RAM setting. The Action
+  will automatically select a `--ram` setting that matches the version
+  of the CLI it uses.
+
+## Release 2.15.5 (2023-12-20)
+
+### New features
+
+- A new extractor option has been added to the JavaScript/TypeScript extractor.
+  Set the environment variable `CODEQL_EXTRACTOR_JAVASCRIPT_OPTION_SKIP_TYPES`
+  to `true` to skip the extraction of types in TypeScript files.
+  Use this to speed up extraction if your codebase has a high volume of
+  TypeScript type information that causes a noticeable bottleneck for
+  TypeScript extraction. The majority of analysis results should be preserved
+  even when no types are extracted.
+
+### Bugs fixed
+
+- Fixed an issue where CodeQL would sometimes incorrectly report that no files
+  were scanned when running on Windows.
+  This affected the human-readable summary produced by `codeql database analyze`
+  and `codeql database interpret-results`, but did not impact the file coverage
+  information produced in the SARIF output and displayed on the tool status page.
+- When analyzing Swift codebases, CodeQL build tracing will now ignore the
+  `codesign` tool. This prevents errors in build commands or workflows on macOS
+  that include both CodeQL and code signing.
+
+## Release 2.15.4 (2023-12-11)
+
+### New features
+
+- Java 21 is now fully supported, including support for new language features such as pattern switches and record patterns.
+
+### Improvements
+
+- Parallelism in the evaluator has been improved, resulting in faster analysis when
+  running with many threads, particularly for large databases.
+
+## Release 2.15.3 (2023-11-22)
+
+### New features
+
+- `codeql database analyze` now defaults to include markdown query help for all custom
+  queries with help files available. To change the default behaviour you can pass the
+  new flag `--sarif-include-query-help`, which provides the options `always` (which
+  includes query help for all queries), `custom_queries_only` (the default) and `never`
+  (which does not include query help for any query). The existing flag
+  `--sarif-add-query-help` has been deprecated and will be removed in a future release.
+- The new (advanced) command-line option `--[no-]linkage-aware-import` disables the
+  linkage-awareness phase of `codeql dataset import`, as a quick fix (at the expense of
+  database completeness) for C++ projects where this part of database creation consumes
+  too much memory. This option is available in the commands `database create`,
+  `database finalize`, `database import`, `dataset import`, `test extract`, and
+  `test run`.
+- The CodeQL language server now provides basic support for Rename, and you can now use
+  the Rename Symbol functionality in Visual Studio Code for CodeQL. The current Rename
+  support is less a refactoring tool and more a labor-saving device. You may have to
+  perform some manual edits after using Rename, but it should still be faster and less
+  work than renaming a symbol manually.
+
+### Improvements
+
+- The Find References feature in the CodeQL language server now supports all CodeQL
+  identifiers and offers improved performance compared to CodeQL CLI 2.14 releases.
+- The compiler generates shorter human-readable DIL and RA relation names. Due to use
+  of an extended character set, full VS Code support for short relation names requires
+  VS Code extension 1.9.4 or newer.
+- `codeql database create` and `codeql database finalize` now log more diagnostic
+  information during database finalization, including the size of each relation, their
+  total size, and the rate at which they were written to disk.
+
+### Bugs fixed
+
+- Fixed an internal error in the compiler when arguments to the `codePointCount` string
+  primitive were not bound.
+- Fixed a bug where `codeql database finalize` would fail if a database under construction
+  was moved between machines between `codeql database init` and `codeql database finalize`.
+  This should now work, as long as both commands are run by the same _release_ of the
+  CodeQL CLI and the extractors used are the ones bundled with the CLI.
+- Fixed a bug where `codeql database run-queries` would fail in some circumstances when
+  the database path included an `@`.
+
+## Release 2.15.2 (2023-11-13)
+
+### Breaking changes
+
+- C++ extraction has been updated to output more accurate C++ value categories.
+  This may cause unexpected alerts on databases extracted with an up-to-date CodeQL
+  when the queries are part of a query pack that was compiled with an earlier CodeQL.
+  To resolve this, please recompile the query pack with the latest CodeQL.
+
+### New features
+
+- `codeql database analyze` and `codeql database interpret-results` can now
+  output human-readable analysis summaries in a new format. This format provides file coverage
+  information and improves the way that diagnostic messages are displayed. The new format also includes a link to the tool status page when the `GITHUB_SERVER_URL` and `GITHUB_REPOSITORY` environment variables are set. Note that that page only exists on GitHub.com, or in GitHub Enterprise Server
+  version 3.9.0 or later. To enable this new format, pass the `--analysis-summary-v2` flag.
+- CodeQL now supports
+  distinguishing file coverage information between related languages C and C++, Java and Kotlin,
+  and JavaScript and TypeScript. By default, file coverage information for each
+  of these pairs of languages is grouped together. To enable specific file coverage information for these languages, pass the
+  `--sublanguage-file-coverage` flag when initializing the database (with `codeql database create` or `codeql database init`) and when analyzing the database (with `codeql database analyze` or `codeql database interpret-results`). If you are uploading results to a GitHub instance, this flag requires GitHub.com or GitHub Enterprise Server version 3.12 or later.
+- All CLI commands now support `--common-caches`, which controls the location of the
+  cached data that is persisted between several runs of the CLI, such as downloaded QL packs
+  and compiled query plans.
+
+### Improvements
+
+- Model packs that are used in an analysis will now be included in an output SARIF results file. All model packs now include the `isCodeQLModelPack: true` property in their tool component property bag.
+- The default formatting of DIL now more closely resembles equivalent QL code.
+
+### Bugs fixed
+
+- Fixed a bug where `codeql github upload-results` would report a 403 error when attempting to upload to a GitHub Enterprise Server instance.
+- Fixed a bug in Python extraction where UTF-8 characters would cause
+  logging to fail on systems with non-UTF-8 default system encoding (for example, Windows systems).
+- The `resolve qlpacks --kind extension` command no longer resolves
+  extensions packs from the search path. This matches the behavior of
+  `resolve extensions-by-pack` and will ensure that extensions which are
+  resolved by `resolve qlpacks --kind extension` can also be resolved by
+  `resolve extensions-by-pack`.
+
+## Release 2.15.1 (2023-10-19)
+
+### Potentially Breaking Changes
+
+- The query server's `evaluation/trimCache` command was previously equivalent to the `codeql database cleanup --mode=gentle` CLI command, but is now equivalent to using `--mode=normal`. The new meaning of the command is to clear the entire evaluation cache of a database except for predicates annotated with the `cached` keyword.
+
+### Deprecations
+
+- The accepted values of the `--mode` option for `codeql database cleanup`  have been renamed to bring them in line with what they are called in the VSCode extension and the query server:
+  - `--mode=brutal` is now `--mode=clear`.
+  - `--mode=normal` is now `--mode=trim`.
+  - `--mode=light` is now `--mode=fit`.
+  - The old names are deprecated, but will be accepted for backwards-compatibility reasons until further notice.
+
+### Improvements
+
+- The list of failed tests at the end of a `codeql test run` is now sorted lexicographically.
+- The syntax of DIL now more closely resembles the QL source code that it is
+  compiled from. In particular, conjunctions and disjunctions now use the
+  familiar `and` and `or` keywords, and clauses are enclosed in curly braces.
+
+### Bugs fixed
+
+- Fixed a bug where the `$CODEQL_JAVA_HOME` environment variable was
+  erroneously ignored for certain subsidiary Java processes started by
+  `codeql`.
+- Fixed a bug in the CodeQL build tracer on Apple Silicon machines that prevented database creation if System Integrity Protection was disabled.
+
+## Release 2.15.0 (2023-10-11)
+
+### Deprecations
+
+- `pragma[assume_small_delta]` is now deprecated. The pragma has no effect and
+  should be removed.
+
+- Missing override annotations on class fields now raise errors rather than
+  warnings. This is to avoid confusion with the shadowing behavior in the
+  presence of final fields.
+
+- The CodeQL CLI no longer supports ML-powered alerts. For more information,
+  including details of our work in the AI-powered security technology space,
+  see
+  "[CodeQL code scanning deprecates ML-powered alerts](https://github.blog/changelog/2023-09-29-codeql-code-scanning-deprecates-ml-powered-alerts/)."
+
+### New Features
+
+- The output of `codeql version --format json` now includes a `features`
+  property. Each key in the map identifies a feature of the CodeQL CLI. The
+  value for a key is always `true`. Going forward, whenever a significant new
+  feature is added to the CodeQL CLI, a corresponding entry will be added to the
+  `features` map. This is intended to make it easier for tools that invoke the
+  CodeQL CLI to know if the particular version of the CLI they are invoking
+  supports a given feature, without having to know exactly what CLI version
+  introduced that feature.
+
+### Improvements
+
+- You can now specify the CodeQL languages C/C++, Java/Kotlin, and
+  JavaScript/TypeScript using `--language c-cpp`, `--language java-kotlin`, and
+  `--language javascript-typescript` respectively. These new CodeQL language
+  names convey more clearly what languages each CodeQL language will analyze.
+
+  You can also reference these CodeQL languages via their secondary language
+  names (C/C++ via `--language c` or `--language cpp`, Java/Kotlin via
+  `--language java` or `--language kotlin`, and JavaScript/TypeScript via
+  `--language javascript` or `--language typescript`), however we recommend you
+  refer to them via the new primary CodeQL language names for improved clarity.
+
+- CodeQL now respects custom home directories set by the `$HOME` environment
+  variable on MacOS and Linux and `%USERPROFILE%` on Windows. When set, CodeQL
+  will use the variable's value to change the default location of downloaded
+  packages and the global compilation cache.
+
+- This release improves the quality of
+  [file coverage information](https://docs.github.com/en/code-security/code-scanning/managing-your-code-scanning-configuration/about-the-tool-status-page#using-the-tool-status-page)
+  for repositories that vendor their dependencies. This is currently supported
+  for Go and JavaScript projects.
+
+### Bugs fixed
+
+- Fixed an issue with analyzing Python projects using Python 3.12.
+
+### QL language improvements
+
+- The QL language now has two new methods `codePointAt` and `codePointCount` on
+  the `string` type. The methods both return integers and act the same as the
+  similarly named Java methods on strings. For example, `"abc".codePointAt(2)`
+  is `99` and `("a" + 128512.toUnicode() + "c").codePointAt(1)` is a `128512`.
+
+## Release 2.14.6 (2023-09-26)
+
+### Bugs fixed
+
+- The tracking of RAM usage has been improved. This fixes some cases
+  where CodeQL uses more RAM than requested.
+
+## Release 2.14.5 (2023-09-14)
+
+### Bugs fixed
+
+- Fixed a JavaScript extractor crash that was introduced in 2.14.4.
+
+## Release 2.14.4 (2023-09-12)
+
+### Potentially breaking changes
+
+- The CodeQL CLI no longer supports the `SEMMLE_JAVA_ARGS` environment variable.
+  All previous versions of the CodeQL CLI perform command substitution on the
+  `SEMMLE_JAVA_ARGS` value (for example, replacing `'$(echo foo)'` with `'foo'`)
+  when starting a new Java virtual machine, which, depending on the execution
+  environment, may have security implications.  Users are advised to check their
+  environments for possible `SEMMLE_JAVA_ARGS` misuse.
+
+### New Features
+
+- The Java extractor now supports files that use Lombok.
+
+### Bugs fixed
+
+- `codeql database init` (and `github/codeql-action/init@v2` on GitHub Actions)
+  should no longer hang or crash for traced languages on 64-bit Windows machines
+  when certain antivirus software is installed.
+- During `codeql pack create` and `codeql pack publish`, a source version of a
+  pack coming from `--additional-packs` can explicitly be used to override a
+  requested pack version even if this source version is incompatible with the
+  requested version in the pack file. Previously, this would fail with a
+  confusing error message.
+- Fixed a bug where `codeql database interpret-results` hangs when a path query
+  produces a result that has no paths from source to sink.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.8.
+
+## Release 2.14.3 (2023-08-25)
+
+### Breaking changes
+
+- The `<run>.tool.extensions` property in the SARIF generated by `codeql database analyze` now contains the
+  following packs:
+
+  - The containing query pack for each query that was evaluated.
+  - Each model pack that was specified via the `--model-packs` option, regardless of whether
+    that model pack affected any of the evaluated queries.
+
+  Library packs are no longer included in the list.
+
+  Previously, this property contained every query and library pack that was available on the search
+  path, regardless of whether that pack was used during the evaluation.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.8.
+
+- When `codeql test` generates `.actual` files, they will in some cases
+  list the query predicates in a different order than past versions.
+  There is no need to update `.expected` files, as `codeql test` sorts
+  their results accordingly before diffing.
+  However, when there are genuine changes in expected results, the
+  generated `.actual` file can show additional changes against the
+  `.expected` due to the reordering.
+
+## Release 2.14.2 (2023-08-11)
+
+### Breaking changes
+
+- The functionality provided by the `codeql execute query-server` subcommand
+  has been removed. The subcommand now responds to all JSON RPC requests with
+  an error response. Correspondingly, this release is no longer compatible with
+  versions of the CodeQL extension for Visual Studio Code prior to 1.7.6.
+
+  This change also breaks third-party CodeQL IDE integrations that still rely
+  on the `codeql execute query-server` subcommand. Maintainers of such CodeQL
+  IDE integrations should migrate to the `codeql execute query-server2`
+  subcommand at the earliest opportunity.
+
+### Improvements
+
+- Switched from prefix filtering of autocomplete suggestions in the language
+  server to client-side filtering. This improves autocomplete suggestions in
+  contexts with an autocompletion prefix.
+
+- The CodeQL language server now checks query metadata for errors. This allows
+  Visual Studio Code users to see errors in their query metadata without needing
+  to compile the query.
+
+### Bugs fixed
+
+- Fixed bug that made the `--warnings=hide` option do nothing in
+  `codeql database analyze` and other commands that _evaluate_ queries.
+
+## Release 2.14.1 (2023-07-27)
+
+- There are no user-facing changes in this release.
+
+## Release 2.14.0 (2023-07-13)
+
+### Potentially breaking changes
+
+- The legacy option `--search-path` will now be used, if provided, when
+  searching for the dependencies of packages that have no lock file.
+- CodeQL query packs that specify their dependencies using the legacy
+  `libraryPathDependencies` property in `qlpack.yml`/`codeql-pack.yml`
+  files are no longer permitted to contain a `codeql-pack.lock.yml` lock file.
+  This will lead to a compilation error. This change is intended to prevent
+  confusing behavior arising from a mix of legacy (unversioned) and modern
+  (versioned) package dependencies. To fix this error, either delete the lock
+  file, or convert `libraryPathDependencies` to `dependencies`.
+- CodeQL CLI commands that create packages or update package lock files, such
+  as `codeql pack publish` and `codeql pack create`, will no longer work on
+  query packs that specify their dependencies using the legacy
+  `libraryPathDependencies` property. To fix this error, convert
+  `libraryPathDependencies` to `dependencies`.
+
+### Deprecations
+
+- Missing override annotations on class member predicates now raise
+  errors rather than warnings. This is to avoid confusion with the
+  shadowing behaviour in the presence of final member predicates.
+  ```ql
+  class Foo extends Base {
+    final predicate foo() { ... }
+
+    predicate bar() { ... }
+  }
+
+  class Bar extends Foo {
+    // This method shadows Foo::foo.
+    predicate foo() { ... }
+
+    // This used to override Foo::bar with a warning, now raises error.
+    predicate bar() { ... }
+  }
+  ```
+
+### Improvements
+
+- Unqualified imports can now be marked as deprecated to indicate that the
+  import may be removed in the future. Usage of names only reachable through
+  deprecated imports will generate deprecation warnings.
+- Classes declared inside a parameterized modules can final extend
+  parameters of the module as well as types that are declared outside
+  the parameterized module.
+- Fields are fully functional when extending types from within a module
+  instantiation.
+- Files with a `.yaml` extension will now be included in compiled
+  CodeQL packs. Previously, files with this extension were excluded
+  even though `.yml` files were included.
+- When interpreting results (e.g., using `bqrs interpret` or
+  `database interpret-results`), extra placeholders in alert messages are
+  treated as normal text. Previously, results with more placeholders than
+  placeholder values were skipped.
+- Windows users of the CodeQL extension for VS Code will see faster start times.
+- In VS Code, errors in the current file are rechecked when dependencies change.
+- In VS Code, autocomplete in large QL files is now faster.
+- Member predicates can shadow final member predicates of the same arity even
+  when the signatures are not fully matching.
+
+### Bugs fixed
+
+- Fixed super calls on final base classes (or final aliases) so that they
+  are now dispatched the same way as super calls on instanceof supertypes.
+- Fixed a bug where running `codeql database finalize` with a large number of
+  threads would fail due to running out of file descriptors.
+- Fixed a bug where `codeql database create --overwrite` would not work
+  with database clusters.
+- Fixed a bug where the CodeQL documentation coverage statistics were
+  incorrect.
+- Fixed a bug where the generated CodeQL libarary documentation could
+  generate invalid uris on windows.
+
+## Release 2.13.5 (2023-07-05)
+
+### New Features
+
+- The Swift extractor now supports Swift 5.8.1.
+
+## Release 2.13.4 (2023-06-19)
+
+### New features
+
+- Temporary files and folders created by the CodeQL CLI will now be cleaned up
+  when each CLI command (and its internal JVM) shuts down normally.
+
+### Bugs fixed
+
+- Fixed an issue where indirect build tracing did not work in Azure DevOps
+  pipeline jobs in Windows containers. To use indirect build tracing in such
+  environments, ensure both the `--begin-tracing` and
+  `--trace-process-name=CExecSvc.exe` arguments are passed to
+  `codeql database init`.
+- Improved the error message for the `codeql pack create` command when the pack
+  being published has a dependency with no scope in its name.
+
+## Release 2.13.3 (2023-05-31)
+
+### New features
+
+- This release enhances our preliminary Swift support, setting the stage for the upcoming public beta.
+
+- The `codeql database bundle` command now supports the `--[no]-include-temp`
+  option. When enabled, this option will include the `temp` folder of the
+  database directory in the zip file of the bundled database. This folder
+  includes generated packages and queries, and query suites.
+
+- The structured log produced by `codeql generate log-summary` now includes a Boolean `isCached`
+ field for predicate events, where a `true` value indicates the predicate is a wrapper implementing
+ the `cached` annotation on another predicate. The wrapper depends on the underlying predicate that
+ the annotation was found on, and will usually have the same name, but it has a separate `raHash`.
+
+### Bugs fixed
+
+- Fixed a bug that could cause the compiler to infer incorrect binding sets for
+  non-direct calls to overriding member predicates that have stronger binding sets
+  than their root definitions.
+
+- Fixed a bug that could have caused the compiler to incorrectly infer that a
+  class matched a type signature. The bug only affected classes with overriding
+  member predicates that had stronger binding sets than their root definitions.
+
+- Fixed a bug where a query could not be run from VS Code
+  when there were packs nested within sibling directories
+  of the query.
+
+## Release 2.13.2
+
+This release was skipped.
+
+## Release 2.13.1 (2023-05-03)
+
+### Bugs fixed
+
+- Fixed a bug in `codeql database upload-results` where the subcommand
+  would fail with "A fatal error occurred: Invalid SARIF.", reporting
+  an `InvalidDefinitionException`. This issue occurred when the SARIF
+  file contained certain kinds of diagnostic information.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.7.
+
+## Release 2.13.0 (2023-04-20)
+
+### Known issues
+
+- We recommend that customers using the CodeQL CLI in a third party CI
+  system do not upgrade to this release, due to an issue with `codeql
+  github upload-results`. Instead, please use CodeQL 2.12.5, or, when
+  available, CodeQL 2.12.7 or 2.13.1. For more information, see the
+  "Known issues" section for CodeQL 2.12.6.
+
+### Potentially breaking changes
+
+- In `codeql pack add`, the dependency that is added to the `qlpack.yml` file will now allow any
+  version of the pack that is compatible with the specified version (`^version`) in the following
+  cases:
+  - When no version is specified (`codeql pack add codeql/cpp-all`).
+  - When the version is specified as `latest` (`codeql pack add codeql/cpp-all@latest`).
+  - When a single version is specified (`codeql pack add codeql/cpp-all@1.0.0`).
+
+  The `^version` dependency allows any version of that pack with no breaking changes since `version`.
+  For example, `^1.2.3` would allow versions `1.2.3`, `1.2.5`, and `1.4.0`, but not `2.0.0`, because
+  changing the major version number to `2` indicates a breaking change.
+
+  Using `^version` ensures that the added pack is not needlessly constrained to an exact version by default.
+
+- Upper-case variable names are no longer accepted by the QL compiler.
+
+  Such variable names have produced a deprecation warning since
+  release 2.9.2 (released 2022-05-16), so QL code that compiles
+  without warnings with a recent release of the CLI should still work.
+
+### New features
+
+- `codeql database analyze` and related commands now export file
+  coverage information by default. GHAS customers using CodeQL in
+  third-party CI systems will now see file coverage information on the
+  [tool status page](https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/about-the-tool-status-page)
+  without needing to modify their CI workflows.
+
+### Deprecations
+
+- The possibility to omit `override` annotations on class member
+  predicates that override a base class predicate has been deprecated.
+  This is to avoid confusion with shadowing behaviour in the
+  presence of final member predicates.
+
+  ```ql
+  class Foo extends Base {
+    final predicate foo() { ... }
+
+    predicate bar() { ... }
+
+    predicate baz() { ... }
+  }
+
+  class Bar extends Foo {
+    // This method shadows Foo::foo.
+    predicate foo() { ... }
+
+    // This used to override Foo::bar with a warning, is now deprecated.
+    predicate bar() { ... }
+
+    // This correctly overrides Foo::baz
+    override predicate baz() { ... }
+  }
+  ```
+
+## Release 2.12.7 (2023-04-18)
+
+### Bugs fixed
+
+- Fixed a bug in `codeql database upload-results` where the subcommand
+  would fail with "A fatal error occurred: Invalid SARIF.", reporting
+  an `InvalidDefinitionException`. This issue occurred when the SARIF
+  file contained certain kinds of diagnostic information.
+
+## Release 2.12.6 (2023-04-04)
+
+### Known issues
+
+- We recommend that customers using the CodeQL CLI in a third party CI
+  system do not upgrade to this release, due to an issue with `codeql
+  github upload-results`. Instead, please use CodeQL 2.12.5, or, when
+  available, CodeQL 2.12.7 or 2.13.1.
+
+  This issue occurs when uploading certain kinds of diagnostic information and
+  causes the subcommand to fail with "A fatal error occurred: Invalid
+  SARIF.", reporting an `InvalidDefinitionException`.
+
+  Customers who wish to use CodeQL 2.12.6 or 2.13.0 can
+  work around the problem by passing `--no-sarif-include-diagnostics`
+  to any invocations of `codeql database analyze` or `codeql database
+  interpret-results`.
+
+### New features
+
+- Several experimental subcommands have been added in support of the
+  new [code scanning tool status page](https://github.blog/changelog/2023-03-28-code-scanning-shows-the-health-of-tools-enabled-on-a-repository/).
+  These include `codeql database add-diagnostic`,
+  `codeql database export-diagnostics`, and the
+  `codeql diagnostic add` and `codeql diagnostic export` plumbing
+  subcommands.
+
+### Bugs fixed
+
+- Fixed a bug in `codeql database analyze` and related commands
+  where the `--max-paths` option was not respected correctly when
+  multiple alerts with the same primary code location were grouped together.
+  (This grouping is the default behavior unless the `--no-group-alerts`
+  option is passed.)
+  This bug caused some SARIF files produced by CodeQL to exceed the limits
+  on the number of paths (`threadFlows`) accepted by code scanning,
+  leading to errors when uploading results.
+
+## Release 2.12.5 (2023-03-21)
+
+### New features
+
+- The `codeql pack install` command now accepts a `--additional-packs`
+  option. This option takes a list of directories to search for
+  locally available packs when resolving which packs to install. Any
+  pack that is found locally through `--additional-packs` will
+  override any other version of a pack found in the package registry.
+  Locally resolved packs are not added to the lock file.
+
+  Because the use of `--additional-packs` when running
+  `codeql pack install` makes running queries dependent on the local
+  state of the machine initially invoking `codeql pack install`, a
+  warning is emitted if any pack is found outside of the package
+  registry. This warning can be suppressed by using the
+  `--no-strict-mode` option.
+
+### Bugs fixed
+
+- Fix a bug in `codeql query run` where queries whose path contain
+  colons cannot be run.
+
+## Release 2.12.4 (2023-03-09)
+
+### Breaking changes
+
+- The default value of the `--mode` switch to `codeql pack install` has changed. The default is now `--mode minimal-update`.
+  Previously, it was `use-lock`.
+
+### New features
+
+- The per-pack compilation cache has been replaced with a global compilation cache
+  found within `~/.codeql`.
+- `codeql pack install` now uses a new algorithm to determine which versions of
+  the pack's dependencies to use, based on the [PubGrub](https://nex3.medium.com/pubgrub-2fb6470504f)
+  algorithm. The new algorithm is able to find a solution for many cases that
+  the previous algorithm would fail to solve. When the new algorithm is unable
+  to find a valid solution, it generates a detailed error message explaining
+  why there is no valid solution.
+- Added a new command, `codeql pack upgrade`. This command is similar to `codeql pack install`,
+  except that it ignores any existing lock file, installs the latest compatible version of each
+  dependency, and writes a new lock file. This is equivalent to `codeql pack install --mode update`.
+  Note that the `--mode` switch to `codeql pack install` is now deprecated.
+- Added a new command, `codeql pack ci`. This command is similar to `codeql pack install`,
+  except if the existing lock file is missing, or if it conflicts with the version constraints in
+  the `qlpack.yml` file, the command generates an error. This is equivalent to
+  `codeql pack install --mode verify`. Note that the `--mode` switch to `codeql pack install` is now
+  deprecated.
+
+### Deprecations
+
+- The `--freeze` switch for `codeql pack create`, `codeql pack bundle`, and `codeql pack publish`
+  is now deprecated and ignored, as there is no longer a cache within a pack.
+- The `--mode update` switch to `codeql pack resolve-dependencies` is now deprecated. Instead, use
+  the new `--mode upgrade` switch, which has identical behavior.
+- The `--mode` switch to `codeql pack install` is now deprecated.
+  - Instead of `--mode update`, use `codeql pack upgrade`.
+  - Instead of `--mode verify`, use `codeql pack ci`.
+
+## Release 2.12.3 (2023-02-23)
+
+### New features
+
+- The CodeQL compiler now produces better error messages when it is unable
+  to find a QL library that the query being evaluated depends on.
+
+### Bugs fixed
+
+- Fixed a bug where the CLI would refuse to complete database creation
+  if the OS reports less than about 1.5 GB of physical memory. Now an
+  attempt will be made even on low-memory systems (but it might still
+  run out of memory unless there's swap space available).
+
+## Release 2.12.2 (2023-02-07)
+
+### Bugs fixed
+
+- Fixed a QL evaluator bug introduced in release 2.12.1 which could in
+  certain rare cases lead to wrong analysis results.
+
+- Fixed handling of `-Xclang <arg>` arguments passed to the `clang` compiler which
+  could cause missing extractions for C++ code bases.
+
+- Fixed a bug where the `--overwrite` option was failing for database clusters.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.6.
+
+## Release 2.12.1 (2023-01-23)
+
+### New features
+
+ - Added a new command-line flag `--expect-discarded-cache`, which gives a hint
+   to the evaluator that the evaluation cache will be discarded after analysis
+   completes. This allows it to avoid some unnecessary writes to the cache, for
+   predicates that aren't needed by the query/suite being evaluated.
+
+## Release 2.12.0 (2023-01-10)
+
+### Breaking changes
+
+- The `--[no-]count-lines` option to `codeql database create` and related commands that was
+  deprecated in 2.11.1 has been removed. Users of this option should instead pass
+  `--[no-]calculate-baseline`.
+
+### New features
+
+- Query packs created by `codeql pack create`, `codeql pack bundle`, and `codeql pack release` now
+  contain precompiled queries in a new format that aims to be compatible with future (and, to a
+  certain extent, past) releases of the CodeQL CLI. Previously the precompiled queries were in a
+  format specific to each CLI release, and all other releases would need to re-compile queries.
+
+  Published packs contain precompiled queries in files with a `.qlx` extension located next to each
+  query's `.ql` source file.  In case of differences between the `.ql` and `.qlx` files, the `.qlx`
+  file takes priority when evaluating queries from the command line, so if you need to modify a
+  published pack, be sure to delete the `.qlx` files first.
+
+  A new `--precompile` flag to `codeql query compile` can be used to construct `*.qlx` file
+  explicitly, but in all usual cases it should be enough to rely on `codeql pack create` doing the
+  right thing.
+- The `codeql database init` command now accepts a PAT that allows you to download queries from
+  external, private repositories when using the `--codescanning-config <config-file>` option. For
+  example, you can specify the following queries block in the config file, which will checkout the main
+  branch of the `codeql-test/my-private-repository` repository and evaluate any queries found in that
+  repository:
+
+  ```yaml
+  queries:
+    - codeql-test/my-private-repository@main
+  ```
+
+  If the repository is private, you can add a `--external-repository-token-stdin` option and supply a
+  PAT with appropriate permissions via standard input. For more information on queries and external
+  repositories in Code Scanning, see [Using queries in QL packs](https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs).
+- The baseline information produced by `codeql database init` and
+  `codeql database create` now accounts for
+  [`paths` and `paths-ignore` configuration](https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#specifying-directories-to-scan).
+- In the VS Code extension, recursive calls will be marked with inlay
+  hints. These can be disabled with the global inlay hints setting
+  (`editor.inlayHints.enabled`). If you just want to disable them for
+  codeql the settings can be scoped to just codeql files (language id is `ql`).
+  See [Language Specific Editor Settings](https://code.visualstudio.com/docs/getstarted/settings#_language-specific-editor-settings)
+  in the VS Code documentation for more information.
+- The CLI now gives a more helpful error message when asked to run queries on a
+  database that has not been finalized.
+
+### Bugs fixed
+
+- Fixed a bug where the `codeql pack install` command would fail if
+  a [CodeQL configuration file](https://codeql.github.com/docs/codeql-cli/specifying-command-options-in-a-codeql-configuration-file/#using-a-codeql-configuration-file)
+  is used and the `--additional-packs` option is specified.
+
+## Release 2.11.6 (2022-12-13)
+
+### Breaking changes
+
+- Java and Kotlin analyses in this release of the CLI and all earlier
+  releases are incompatible with Kotlin 1.7.30 and later. To prevent
+  code scanning alerts being spuriously dismissed, Java and Kotlin
+  analyses will now fail when using Kotlin 1.7.30 or later.
+
+  If you are unable to use Kotlin 1.7.29 or earlier, you can disable
+  Kotlin support by setting
+  `CODEQL_EXTRACTOR_JAVA_AGENT_DISABLE_KOTLIN` to `true` in the
+  environment.
+
+### Bugs fixed
+
+- Fixed a bug where it was not possible to run queries in CodeQL query
+  packs for C# that use the legacy `libraryPathDependencies` property
+  in their `qlpack.yml` file. The associated error message complained
+  about undefined extensional predicates.
+
+## Release 2.11.5 (2022-12-07)
+
+### Bugs Fixed
+
+- Fixed a bug that could cause log summary generation to fail in vscode.
+
+## Release 2.11.4 (2022-11-24)
+
+### New features
+
+- Kotlin support is now in beta. This means that Java analyses will also
+  include Kotlin code by default. Kotlin support can be disabled by
+  setting `CODEQL_EXTRACTOR_JAVA_AGENT_DISABLE_KOTLIN` to `true` in
+  the environment.
+
+### Potentially breaking changes
+
+- CodeQL 2.11.1 to 2.11.3 contained a bug in [indirect build tracing](https://codeql.github.com/docs/codeql-cli/creating-codeql-databases/#using-indirect-build-tracing) on Windows
+  when using `codeql database init` with the [`--trace-process-level`](https://codeql.github.com/docs/codeql-cli/manual/database-init/#cmdoption-codeql-database-init-trace-process-level) flag.
+  In these versions, when `--trace-process-level` was set to a value greater than zero,
+  (or left at the default value of 1), CodeQL attempted to inject its build tracer
+  at a higher level in the process tree than the requested process level.
+  This could lead to errors of the form "No source code found" or
+  "Process tree ended before reaching required level".
+  From 2.11.4 onwards, the CodeQL build tracer is injected at the requested process level.
+
+### Deprecations
+
+- The `--[no-]fast-compilation` option to `codeql test run` is now
+  deprecated.
+
+## Release 2.11.3 (2022-11-11)
+
+### Breaking changes
+
+- The `codeql pack ls --format json` deep plumbing command now returns
+  only the `name` and `version` properties for each found pack.
+
+### Potentially breaking changes
+
+- `codeql pack download`, `codeql pack install`, and `codeql pack add`
+  will ignore CodeQL packs with pre-release versions, unless the
+  `--allow-prerelease` option is passed to the command. This brings
+  these commands into alignment with `codeql pack publish` that will
+  avoid publishing CodeQL packs with pre-release versions unless the
+  `--allow-prerelease` option is specified. Pre-release versions have
+  the following format: `X.Y.Z-qualifier` where `X`, `Y`, and `Z` are
+  respectively the major, minor, and patch number. `qualifier` is the
+  pre-release version. For more information about pre-releases, see
+  the
+  [Semantic Versioning specification](https://semver.org/#spec-item-9).
+
+### Deprecations
+
+- The `--[no-]fast-compilation` option to `codeql query compile` is
+  now deprecated.
+
+### New features
+
+- `codeql resolve files` and `codeql database index-files` have a new
+  `--find-any` option, which finds at most one match.
+
+### Miscellaneous
+
+- The build of Apache Commons Text that is bundled with the CodeQL CLI
+  has been updated to version 1.10.0. While previous releases shipped
+  with version 1.6 of the library, no part of the CodeQL CLI
+  references the `StringSubstitutor` class that the recently disclosed
+  [CVE-2022-42889](https://github.com/advisories/GHSA-599f-7c49-w659)
+  vulnerability applies to. We therefore do not believe that running
+  previous releases of CodeQL exposes users to this vulnerability.
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.5.
+
+## Release 2.11.2 (2022-10-25)
+
+### Breaking changes
+
+- Bundling and publishing a CodeQL pack will no longer include nested
+  CodeQL packs. If you want to include a nested pack in your published pack,
+  then you must explicitly include it using the `include` property in the
+  top-level `qlpack.yml` file.
+
+  For example, if your package structure looks like this:
+
+  ```text
+  qlpack.yml
+  nested-pack
+     ∟ qlpack.yml
+       query.ql
+  ```
+
+  then the contents of `nested-pack` will not be included by default within
+  the published package. To include `nested-pack`, add an entry like this
+  to the top level `qlpack.yml` file:
+
+  ```yml
+  include:
+    - nested-pack/**
+  ```
+
+### Bugs fixed
+
+- Using the `--codescanning-config=<file>` option in
+  `codeql database init` will now correctly process the `paths` and
+  `pathsIgnore` properties of the configuration file in a way that is
+  identical to the behavior of the `codeql-action`. Previously, `paths`
+  or `pathsIgnore` entries that end in `/**` or start with `/`  were
+  incorrectly rejected by the CLI.
+
+- Fixed a bug where the `--compilation-cache` option to
+  `codeql pack publish` and `codeql pack create` was being ignored
+  when creating a query pack.  Now, the indicated cache is used
+  when pre-compiling the queries in it.
+
+- Fixed a bug that would make the "Show DIL" command in the VSCode
+  extension display nothing.
+
+### Other changes
+
+- Emit a detailed warning if package resolution fails, the legacy
+  `--search-path` option is provided, _and_ there is at least one
+  referenced pack that does not use legacy package resolution.
+  In this case, `--additional-packs` should be used to extend the
+  search to additional directories, instead of `--search-path`.
+
+## Release 2.11.1 (2022-10-11)
+
+### Breaking changes
+
+- Pack installation using the CodeQL Packaging beta will now fail if a
+  compatible version cannot be found. This replaces the previous
+  behavior where `codeql pack download` and related commands would
+  instead install the latest version of the pack in this situation.
+
+### Deprecations
+
+- The `--[no-]count-lines` option to `codeql database create` and
+  related commands is now deprecated and will be removed in a future
+  release of the CodeQL CLI (earliest 2.12.0). It is replaced by
+  `--[no-]calculate-baseline` to reflect the additional baseline
+  information that is now captured as of this release.
+
+### New features
+
+- Subcommands that compile QL accept a new `--no-release-compatibility`
+  option. It does nothing for now, but in the future it will be used
+  to control a trade-off between query performance and compatibility
+  with older/newer releases of the QL evaluator.
+- `codeql database analyze` and related commands now support absolute
+  paths containing the `@` or `:` characters when specifying which queries
+  to run. To reference a query file, directory, or suite whose path contains
+  a literal `@` or `:`, prefix the query specifier with `path:`, for example:
+  ```shell
+      codeql database analyze --format=sarif-latest --output=results <db> path:C:/Users/ci/workspace@2/security/query.ql
+  ```
+### Bugs fixed
+
+- It is no longer an error to call `codeql pack create <path>` with a `<path>`
+  option pointing to a file name. The CLI will walk up the directory tree and
+  run the command in the first directory containing the `qlpack.yml` or `codeql-pack.yml` file.
+- Fixed a concurrency error observed when using `codeql database import` or
+  `codeql database finalize` with multiple threads and multiple additional
+  databases on a C++ codebase.
+
+## Release 2.11.0 (2022-09-28)
+
+### Deprecation
+
+- The CodeQL CLI now uses Python 3 to extract both Python 2 and Python 3
+  databases. Correspondingly, support for using Python 2 to extract
+  Python databases is now deprecated. Starting with version 2.11.3, you
+  will need to install Python 3 to extract Python databases.
+
+### Miscellaneous
+
+- The build of Eclipse Temurin OpenJDK that is bundled with the CodeQL
+  CLI has been updated to version 17.0.4.
+
+## Release 2.10.5 (2022-09-13)
+
+### New features
+
+- You can now define which registries should be used for downloading and publishing CodeQL packs on a
+  per-workspace basis by creating a `codeql-workspace.yml` file and adding a `registries` block. For
+  more infomation, see [About CodeQL Workspaces](https://codeql.github.com/docs/codeql-cli/about-codeql-workspaces/).
+
+## Release 2.10.4 (2022-08-31)
+
+- The bundled extractors are updated to match the versions currently
+  used on LGTM.com. These are newer than the last release (1.30) of
+  LGTM Enterprise. If you plan to upload databases to an LGTM
+  Enterprise 1.30 instance, you need to create them with release
+  2.7.6.
+
+- This release does not include any user-facing changes.
+
 ## Release 2.10.3 (2022-08-15)
 
 - The bundled extractors are updated to match the versions currently
